@@ -1,0 +1,5 @@
+.direnv/
+.ccls-cache/
+build/
+lib/
+make

@@ -1,0 +1,3 @@
+gcc
+%c -std=gnu23
+-I./lib/
