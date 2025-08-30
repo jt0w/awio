@@ -266,6 +266,8 @@ int main(int argc, char **argv) {
   state.xdg_toplevel = xdg_surface_get_toplevel(state.xdg_surface);
   xdg_toplevel_add_listener(state.xdg_toplevel, &xdg_toplevel_listener, NULL);
   xdg_toplevel_set_title(state.xdg_toplevel, "awio");
+  xdg_toplevel_set_min_size(state.xdg_toplevel, WIDTH, HEIGHT);
+  xdg_toplevel_set_max_size(state.xdg_toplevel, WIDTH, HEIGHT);
   wl_surface_commit(state.wl_surface);
 
   struct wl_callback *cb = wl_surface_frame(state.wl_surface);
