@@ -57,8 +57,27 @@ int allocate_shm_file(size_t size) {
   return fd;
 }
 
+
+#define WIDTH 640
+#define HEIGHT 480
+
+#define MILIS_PER_SEC 1 * 1000
+#define MICROS_PER_SEC MILIS_PER_SEC * 1000
+#define NANOS_PER_SEC MICROS_PER_SEC * 1000
+
+#define VELOCITY 500
+
+#define START_X WIDTH / 2
+#define START_Y HEIGHT / 2
+
+#define RADIUS 100
 struct {
   bool quit;
+  uint32_t last_frame;
+  int x;
+  int y;
+  int dx;
+  int dy;
 
   struct wl_display *wl_display;
   struct wl_compositor *wl_compositor;
@@ -68,7 +87,12 @@ struct {
   struct xdg_surface *xdg_surface;
   struct xdg_toplevel *xdg_toplevel;
   struct xdg_wm_base *xdg_wm_base;
-} state;
+} state = {
+  .x = START_X,
+  .y = START_Y,
+  .dx = VELOCITY,
+  .dy = VELOCITY,
+};
 
 static void wl_buffer_release(void *data, struct wl_buffer *wl_buffer) {
   /* Sent by the compositor when it's no longer using this buffer */
@@ -79,9 +103,6 @@ static void wl_buffer_release(void *data, struct wl_buffer *wl_buffer) {
 static const struct wl_buffer_listener wl_buffer_listener = {
     .release = wl_buffer_release,
 };
-
-#define WIDTH 640
-#define HEIGHT 480
 
 static struct wl_buffer *draw_frame() {
   int stride = WIDTH * 4;
@@ -105,9 +126,8 @@ static struct wl_buffer *draw_frame() {
   close(fd);
 
   Olivec_Canvas oc = olivec_canvas(data, WIDTH, HEIGHT, WIDTH);
-
-  olivec_fill(oc, 0xFF181818);
-  olivec_circle(oc, WIDTH / 2, HEIGHT / 2, 100, 0xFFFFFFFF);
+  olivec_fill(oc, 0xFFFFFFFF);
+  olivec_circle(oc, state.x, state.y, RADIUS, 0xFFFF0000);
 
   munmap(data, size);
   wl_buffer_add_listener(buffer, &wl_buffer_listener, NULL);
@@ -159,6 +179,39 @@ static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
 static const struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = xdg_wm_base_ping,
 };
+
+
+static const struct wl_callback_listener wl_surface_frame_listener;
+
+static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
+  UNUSED(data);
+  wl_callback_destroy(cb);
+
+  cb = wl_surface_frame(state.wl_surface);
+  wl_callback_add_listener(cb, &wl_surface_frame_listener, NULL);
+
+  if (state.last_frame != 0) {
+    int dt = time - state.last_frame;
+    int cx = state.x + state.dx * (dt / 1000);
+    int cy = state.y + state.dy * (dt / 1000);
+    if (cx + RADIUS >= WIDTH  || cx - RADIUS <= 0) state.dx *= -1;
+    if (cy + RADIUS >= HEIGHT || cy - RADIUS <= 0) state.dy *= -1;
+    state.x += state.dx * dt / 1000;
+    state.y += state.dy * dt / 1000;
+  }
+
+  struct wl_buffer *buffer = draw_frame(state);
+  wl_surface_attach(state.wl_surface, buffer, 0, 0);
+  wl_surface_damage_buffer(state.wl_surface, 0, 0, INT32_MAX, INT32_MAX);
+  wl_surface_commit(state.wl_surface);
+
+  state.last_frame = time;
+}
+
+static const struct wl_callback_listener wl_surface_frame_listener = {
+  .done = wl_surface_frame_done,
+};
+
 
 static void registry_global(void *data, struct wl_registry *wl_registry,
                             uint32_t name, const char *interface,
@@ -214,6 +267,10 @@ int main(int argc, char **argv) {
   xdg_toplevel_add_listener(state.xdg_toplevel, &xdg_toplevel_listener, NULL);
   xdg_toplevel_set_title(state.xdg_toplevel, "awio");
   wl_surface_commit(state.wl_surface);
+
+  struct wl_callback *cb = wl_surface_frame(state.wl_surface);
+  wl_callback_add_listener(cb, &wl_surface_frame_listener, NULL);
+
 
   while (wl_display_dispatch(state.wl_display) && !state.quit) {}
 
