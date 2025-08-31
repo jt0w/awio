@@ -39,6 +39,7 @@
 
               nativeBuildInputs = with pkgs; [
                 wayland-scanner
+                curl
               ];
               buildInputs = with pkgs; [
                 gcc

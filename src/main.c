@@ -8,6 +8,7 @@
 
 #include <wayland-client.h>
 #include <xdg-shell-protocol.h>
+#include <xdg-decoration.h>
 
 #define UNUSED(x) ((void)x)
 
@@ -87,6 +88,9 @@ struct {
   struct xdg_surface *xdg_surface;
   struct xdg_toplevel *xdg_toplevel;
   struct xdg_wm_base *xdg_wm_base;
+
+  struct zxdg_decoration_manager_v1 *decoration_manager;
+  struct zxdg_toplevel_decoration_v1 *decoration;
 } state = {
   .x = START_X,
   .y = START_Y,
@@ -137,6 +141,7 @@ static struct wl_buffer *draw_frame() {
 static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
                                   uint32_t serial) {
   UNUSED(data);
+
   xdg_surface_ack_configure(xdg_surface, serial);
 
   struct wl_buffer *buffer = draw_frame();
@@ -231,6 +236,9 @@ static void registry_global(void *data, struct wl_registry *wl_registry,
     state.xdg_wm_base =
         wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, 1);
     xdg_wm_base_add_listener(state.xdg_wm_base, &xdg_wm_base_listener, NULL);
+  } else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
+  state.decoration_manager = wl_registry_bind(wl_registry, name, 
+      &zxdg_decoration_manager_v1_interface, version);
   }
 }
 
@@ -268,6 +276,10 @@ int main(int argc, char **argv) {
   xdg_toplevel_set_title(state.xdg_toplevel, "awio");
   xdg_toplevel_set_min_size(state.xdg_toplevel, WIDTH, HEIGHT);
   xdg_toplevel_set_max_size(state.xdg_toplevel, WIDTH, HEIGHT);
+  state.decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
+      state.decoration_manager, state.xdg_toplevel);
+  zxdg_toplevel_decoration_v1_set_mode(state.decoration, 
+      ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
   wl_surface_commit(state.wl_surface);
 
   struct wl_callback *cb = wl_surface_frame(state.wl_surface);
