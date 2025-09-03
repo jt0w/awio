@@ -392,11 +392,13 @@ static char olivec_default_glyphs[128][OLIVEC_DEFAULT_FONT_HEIGHT][OLIVEC_DEFAUL
     },
 };
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
 static Olivec_Font olivec_default_font = {
     .glyphs = &olivec_default_glyphs[0][0][0],
     .width = OLIVEC_DEFAULT_FONT_WIDTH,
     .height = OLIVEC_DEFAULT_FONT_HEIGHT,
 };
+#pragma GCC diagnostic pop
 
 // WARNING! Always initialize your Canvas with a color that has Non-Zero Alpha Channel!
 // A lot of functions use `olivec_blend_color()` function to blend with the Background
@@ -806,7 +808,9 @@ OLIVECDEF void olivec_triangle3z(Olivec_Canvas oc, int x1, int y1, int x2, int y
                 int u1, u2, det;
                 if (olivec_barycentric(x1, y1, x2, y2, x3, y3, x, y, &u1, &u2, &det)) {
                     float z = z1*u1/det + z2*u2/det + z3*(det - u1 - u2)/det;
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
                     OLIVEC_PIXEL(oc, x, y) = *(uint32_t*)&z;
+#pragma GCC diagnostic pop
                 }
             }
         }

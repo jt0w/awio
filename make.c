@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
   cmd_push(&cmd, "-Wall", "-Wextra", "-Wno-missing-braces","-ggdb");
   cmd_push(&cmd, "-DAWIO_DEBUG");
   cmd_push(&cmd, "src/main.c");
+  cmd_push(&cmd, "src/renderer.c");
   cmd_push(&cmd, "lib/xdg-decoration.c");
   cmd_push(&cmd, "lib/xdg-shell-protocol.c");
   cmd_push(&cmd, "-o", "build/awio");
