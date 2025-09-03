@@ -38,14 +38,12 @@ void update(int dt) {
     if (cy + RADIUS >= HEIGHT || cy - RADIUS <= 0) state.dy *= -1;
     state.x += state.dx * dt / 1000;
     state.y += state.dy * dt / 1000;
-    println("updating");
 }
 
 void render(uint32_t *pixels) {
   Olivec_Canvas oc = olivec_canvas(pixels, WIDTH, HEIGHT, WIDTH);
   olivec_fill(oc, 0xFFFFFFFF);
   olivec_circle(oc, state.x, state.y, RADIUS, 0xFFFF0000);
-  println("rendering");
 }
 
 int main(int argc, char **argv) {
