@@ -19,12 +19,13 @@
 
 #define SIDE_LENGTH 100
 
-const static uint32_t colors[] = {
+static const uint32_t colors[] = {
   0xFFFF0000,
   0xFF00FF00,
   0xFF0000FF,
 };
-const static size_t colors_c = sizeof (colors) / sizeof (colors[0]);
+static const size_t colors_c = sizeof (colors) / sizeof (colors[0]);
+
 struct {
   bool quit;
   int x;
