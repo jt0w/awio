@@ -134,7 +134,7 @@ int main() {
   return 0;
 }
 
-// screenPos
+// pos is in gridPos
 void drawRect(V2 pos, V2 size) {
   SDL_FRect rect = {
       .x = pos.x * GRID_CELL_SIZE.x,
