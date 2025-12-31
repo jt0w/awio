@@ -38,8 +38,6 @@ struct {
   float mouse_y;
   V2 pos;
   V2 p1;
-  V2 p2;
-  V2 p3;
 } state = {
     .quit = false,
     .pos = {4.5, 4.5},
@@ -50,32 +48,46 @@ void drawRect(V2 pos, V2 size);
 void update() {
   SDL_GetMouseState(&state.p1.x, &state.p1.y);
   state.p1 = V2div(state.p1, GRID_CELL_SIZE);
-  printf("p1(%lf|%lf)\n", state.p1.x, state.p1.y);
-  V2 d = V2sub(state.p1, state.pos);
-  // printf("dx = %lf\n", d.x);
   // reference: y = mx + b
   //            m = dy / dx
   //            b = y - mx
   //            x = (y - b) / m
-  float m = d.y / d.x;
-  float b = state.pos.y - m * state.pos.x;
-  if (d.x != 0) {
-    if (d.x > 0)
-      state.p2.x = ceil(state.p1.x);
-    if (d.x < 0)
-      state.p2.x = floor(state.p1.x);
-    state.p2.y = m * state.p2.x + b;
-  }
-  if (d.y != 0) {
-    if (d.y > 0)
-      state.p3.y = ceil(state.p1.y);
-    if (d.y < 0)
-      state.p3.y = floor(state.p1.y);
-    state.p3.x = (state.p3.y - b) / m;
-  }
 }
 
-void render() {
+// TODO: better name
+// not just V2 of v2
+typedef struct {
+  V2 p1;
+  V2 p2;
+
+} V2v2;
+
+V2v2 cast_ray(V2 p1, V2 p2) {
+  V2 d = V2sub((p2), (p1));
+  V2v2 result = {0};
+
+  float m = d.y / d.x;
+  float b = p1.y - m * p1.x;
+  if (d.x != 0) {
+    if (d.x > 0)
+      result.p1.x = ceil(p2.x);
+    if (d.x < 0)
+      result.p1.x = floor(p2.x);
+    result.p1.y = m * result.p1.x + b;
+  }
+
+  if (d.y != 0) {
+    if (d.y > 0)
+      result.p2.y = ceil(p2.y);
+    if (d.y < 0)
+      result.p2.y = floor(p2.y);
+    result.p2.x = (result.p2.y - b) / m;
+  }
+
+  return result;
+}
+
+void draw_minimap() {
   for (size_t x = 0; x < GRID_SIZE.x; ++x) {
     SDL_SetRenderDrawColor(state.renderer, 0xFF, 0, 0, 0xFF);
     SDL_RenderLine(state.renderer, x * GRID_CELL_SIZE.x, 0,
@@ -100,9 +112,16 @@ void render() {
                  state.p1.x  * GRID_CELL_SIZE.x, state.p1.y * GRID_CELL_SIZE.y);
 
   SDL_SetRenderDrawColor(state.renderer, 0xFF, 0x00, 0xFF, 0xFF);
-  drawRect(state.p2, (V2){5, 5});
-  drawRect(state.p3, (V2){5, 5});
+
+  V2v2 points = cast_ray(state.pos, state.p1);
+  drawRect(points.p1, (V2){5, 5});
+  drawRect(points.p2, (V2){5, 5});
 }
+
+void render() {
+  draw_minimap();
+}
+
 
 int main() {
   ASSERT(SDL_Init(SDL_INIT_VIDEO), "SDL failed to initialize: %s\n",
