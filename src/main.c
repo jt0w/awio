@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
+
 typedef struct {
   float x;
   float y;
@@ -124,6 +126,7 @@ void render() {
 
 
 int main() {
+  breakpoint();
   ASSERT(SDL_Init(SDL_INIT_VIDEO), "SDL failed to initialize: %s\n",
          SDL_GetError());
 
