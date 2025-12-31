@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    chimera.url = "github:secretval/stc";
+    chimera.url = "github:jt0w/chimera";
   };
 
   outputs = inputs @ {flake-parts, ...}:
