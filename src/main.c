@@ -5,31 +5,45 @@
 #include <string.h>
 
 #include "debug.h"
+#define EPS 1e-6
 
 typedef struct {
   float x;
   float y;
 } V2;
 
+#define V2(x, y) ((V2){(x), (y)})
 #define V2add(A, B) ((V2){((A.x) + (B.x)), ((A.y) + B.y)})
 #define V2sub(A, B) ((V2){((A.x) - (B.x)), ((A.y) - B.y)})
 #define V2mul(A, B) ((V2){((A.x) * (B.x)), ((A.y) * B.y)})
 #define V2div(A, B) ((V2){((A.x) / (B.x)), ((A.y) / B.y)})
 
-#define ASSERT(_x, ...)                       \
-  do {                                        \
-    if (!(_x)) {                              \
-      fprintf(stderr, __VA_ARGS__);           \
-      exit(1);                                \
-    }                                         \
+#define ASSERT(_x, ...)                                                        \
+  do {                                                                         \
+    if (!(_x)) {                                                               \
+      fprintf(stderr, __VA_ARGS__);                                            \
+      exit(1);                                                                 \
+    }                                                                          \
   } while (0)
 
 #define MINI_MAP_PLAYER_SIZE 20
 
 static const V2 SCREEN_SIZE = {620, 400};
-
-static const V2 GRID_SIZE = {8, 8};
+#define GRID_WIDTH 8
+#define GRID_HEIGHT 8
+static const V2 GRID_SIZE = {GRID_WIDTH, GRID_HEIGHT};
 static const V2 GRID_CELL_SIZE = V2div(SCREEN_SIZE, GRID_SIZE);
+
+static const uint8_t MAP[GRID_HEIGHT][GRID_WIDTH] = {
+    {1, 1, 0, 0, 0, 0, 0, 0},
+    {1, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0}
+};
 
 struct {
   SDL_Window *window;
@@ -39,17 +53,17 @@ struct {
   float mouse_x;
   float mouse_y;
   V2 pos;
-  V2 p1;
+  V2 dir;
 } state = {
     .quit = false,
-    .pos = {4.5, 4.5},
+    .pos = {6, 6},
 };
 
 void drawRect(V2 pos, V2 size);
 
 void update() {
-  SDL_GetMouseState(&state.p1.x, &state.p1.y);
-  state.p1 = V2div(state.p1, GRID_CELL_SIZE);
+  SDL_GetMouseState(&state.dir.x, &state.dir.y);
+  state.dir = V2div(state.dir, GRID_CELL_SIZE);
   // reference: y = mx + b
   //            m = dy / dx
   //            b = y - mx
@@ -61,7 +75,6 @@ void update() {
 typedef struct {
   V2 p1;
   V2 p2;
-
 } V2v2;
 
 V2v2 cast_ray(V2 p1, V2 p2) {
@@ -72,9 +85,9 @@ V2v2 cast_ray(V2 p1, V2 p2) {
   float b = p1.y - m * p1.x;
   if (d.x != 0) {
     if (d.x > 0)
-      result.p1.x = ceil(p2.x);
+      result.p1.x = ceil(p2.x + EPS);
     if (d.x < 0)
-      result.p1.x = floor(p2.x);
+      result.p1.x = floor(p2.x - EPS);
     result.p1.y = m * result.p1.x + b;
   }
 
@@ -90,40 +103,69 @@ V2v2 cast_ray(V2 p1, V2 p2) {
 }
 
 void draw_minimap() {
+  SDL_SetRenderDrawColor(state.renderer, 0xFF, 0, 0, 0xFF);
   for (size_t x = 0; x < GRID_SIZE.x; ++x) {
-    SDL_SetRenderDrawColor(state.renderer, 0xFF, 0, 0, 0xFF);
     SDL_RenderLine(state.renderer, x * GRID_CELL_SIZE.x, 0,
                    x * GRID_CELL_SIZE.x, SCREEN_SIZE.y);
   }
+
   for (size_t y = 0; y < GRID_SIZE.y; ++y) {
-    SDL_SetRenderDrawColor(state.renderer, 0xFF, 0, 0, 0xFF);
     SDL_RenderLine(state.renderer, 0, y * GRID_CELL_SIZE.y, SCREEN_SIZE.x,
                    y * GRID_CELL_SIZE.y);
+  }
+
+  SDL_SetRenderDrawColor(state.renderer, 0x00, 0x00, 0xFF, 0xFF);
+  for (size_t x = 0; x < GRID_SIZE.x; ++x) {
+    for (size_t y = 0; y < GRID_SIZE.y; ++y) {
+      if (MAP[y][x] == 1) {
+        drawRect(V2(x, y), GRID_CELL_SIZE);
+      }
+    }
   }
 
   SDL_SetRenderDrawColor(state.renderer, 0x00, 0xFF, 0x00, 0xFF);
   drawRect(state.pos, (V2){MINI_MAP_PLAYER_SIZE, MINI_MAP_PLAYER_SIZE});
 
   SDL_SetRenderDrawColor(state.renderer, 0x00, 0x00, 0xFF, 0xFF);
-  drawRect(state.p1, (V2){10, 10});
+  drawRect(state.dir, (V2){10, 10});
 
   SDL_SetRenderDrawColor(state.renderer, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderLine(state.renderer,
                  state.pos.x * GRID_CELL_SIZE.x + (MINI_MAP_PLAYER_SIZE / 2),
                  state.pos.y * GRID_CELL_SIZE.y + (MINI_MAP_PLAYER_SIZE / 2),
-                 state.p1.x  * GRID_CELL_SIZE.x, state.p1.y * GRID_CELL_SIZE.y);
+                 state.dir.x * GRID_CELL_SIZE.x,
+                 state.dir.y * GRID_CELL_SIZE.y);
+
+  V2v2 points = cast_ray(state.pos, state.dir);
+  // while ((MAP[(int)points.p1.y][(int)points.p1.x] != 1 ||
+  //         MAP[(int)points.p2.y][(int)points.p2.x] != 1) &&
+  //        points.p1.x >= 0 && points.p1.x <= GRID_SIZE.x && points.p1.y >= 0
+  //        && points.p1.y <= GRID_SIZE.y) {
+  //   points = cast_ray(points.p1, points.p2);
+  // }
+
+  V2 p1 = V2(floor(fabs(points.p1.x)), floor(fabs(points.p1.y)));
+  V2 p2 = V2(floor(fabs(points.p2.x)), floor(fabs(points.p2.y)));
 
   SDL_SetRenderDrawColor(state.renderer, 0xFF, 0x00, 0xFF, 0xFF);
+  // drawRect(p1, V2(5, 5));
+  // drawRect(p2, V2(5, 5));
 
-  V2v2 points = cast_ray(state.pos, state.p1);
-  drawRect(points.p1, (V2){5, 5});
-  drawRect(points.p2, (V2){5, 5});
+  SDL_SetRenderDrawColor(state.renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+  if (!isnan(p1.x) && !isnan(p1.y)) {
+    if (MAP[(int)p1.y][((int)p1.x)] == 1 || MAP[(int)p1.y][(int)p1.x-1]) {
+      drawRect(points.p1, V2(5, 5));
+    }
+  }
+
+  if (!isnan(p2.x) && !isnan(p2.y)) {
+    if (MAP[(int)p2.y][(int)p2.x] || MAP[(int)p2.y-1][(int)p2.x] == 1) {
+      drawRect(points.p2, V2(5, 5));
+    }
+  }
 }
 
-void render() {
-  draw_minimap();
-}
-
+void render() { draw_minimap(); }
 
 int main() {
   breakpoint();
